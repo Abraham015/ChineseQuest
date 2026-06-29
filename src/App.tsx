@@ -7,12 +7,13 @@ import HelpPage from "./pages/HelpPage";
 import VocabularyPage from "./pages/VocabularyPage";
 import type { Section } from "./types/navigation";
 import { announce } from "./utils/announce";
+import { useSupabaseAccount } from "./hooks/useSupabaseAccount";
 
 export default function App() {
+  const account = useSupabaseAccount();
   const [activeSection, setActiveSection] = useState<Section>("grammar");
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const isSignedIn = false;
 
   const searchResults = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -66,7 +67,7 @@ export default function App() {
               placeholder="Buscar hanzi, pinyin o significado..."
             />
           </label>
-          <button className="account-pill" onClick={() => changeSection("account")}>Iniciar sesion</button>
+          <AccountHeaderButton onOpen={() => changeSection("account")} />
 
           {searchResults.length > 0 && (
             <div className="search-popover">
@@ -87,10 +88,29 @@ export default function App() {
         </header>
 
         {activeSection === "grammar" && <GrammarPage />}
-        {activeSection === "vocabulary" && <VocabularyPage isSignedIn={isSignedIn} onGoToAccount={() => changeSection("account")} />}
+        {activeSection === "vocabulary" && <VocabularyPage isSignedIn={account.isSignedIn} onGoToAccount={() => changeSection("account")} />}
         {activeSection === "account" && <AccountPage />}
         {activeSection === "help" && <HelpPage />}
       </main>
+    </div>
+  );
+}
+
+function AccountHeaderButton({ onOpen }: { onOpen: () => void }) {
+  const { displayName, isConfigured, isLoading, isSignedIn, signOut } = useSupabaseAccount();
+
+  if (!isConfigured) {
+    return <button className="account-pill" onClick={onOpen}>Supabase sin configurar</button>;
+  }
+
+  if (!isSignedIn) {
+    return <button className="account-pill" onClick={onOpen} disabled={isLoading}>Iniciar sesion</button>;
+  }
+
+  return (
+    <div className="account-header">
+      <button className="account-pill" onClick={onOpen}>{displayName || "Cuenta"}</button>
+      <button className="account-signout" onClick={() => void signOut()} disabled={isLoading}>Salir</button>
     </div>
   );
 }
